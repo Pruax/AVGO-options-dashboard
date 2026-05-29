@@ -1,98 +1,154 @@
-import yfinance as yf
-import pandas as pd
-from datetime import date, datetime
+from datetime import datetime, date
 from pathlib import Path
+
+import pandas as pd
+import yfinance as yf
 
 # --------------------------------------------------
 # Configuration
 # --------------------------------------------------
 TICKER = "AVGO"
-MIN_VOLUME = 3000
+MIN_VOLUME = 500
+
 DATA_PATH = Path("C:/Users/B Dog/Documents/options_scanner/avgo_options.csv")
-TODAY = date.today().isoformat()
 
 # --------------------------------------------------
 # Helpers
 # --------------------------------------------------
 def get_nearest_expiration(ticker: yf.Ticker) -> str:
     """Return the nearest non-expired option expiration."""
+    
     today = date.today()
-    expirations = ticker.options
-
-    future_exps = [
-        exp for exp in expirations
+    
+    expirations = [
+        exp for exp in ticker.options
         if datetime.strptime(exp, "%Y-%m-%d").date() >= today
     ]
 
     return min(
-        future_exps,
+        expirations,
         key=lambda x: datetime.strptime(x, "%Y-%m-%d").date()
     )
 
 
-def filter_options(df: pd.DataFrame, option_type: str) -> pd.DataFrame:
+def filter_options(df: pd.DataFrame, option_type: str, expiration: str, 
+                    min_volume: int, meta: dict) -> pd.DataFrame:
     """Filter options by volume and add metadata."""
-    filtered = df[df["volume"] > MIN_VOLUME].copy()
+    
+    filtered = df[df["volume"] > min_volume].copy()
 
-    filtered["date"] = TODAY
-    filtered["ticker"] = TICKER
-    filtered["expiration"] = EXPIRATION
+    filtered["date"] = meta["today"]
+    filtered["scan_time"] = meta["scan_time"]
+    filtered["ticker"] = meta["ticker"]
+    filtered["expiration"] = expiration
     filtered["optionType"] = option_type
 
     return filtered
 
-
 # --------------------------------------------------
-# Fetch Options Data
+# Create scanner_log file
 # --------------------------------------------------
-ticker = yf.Ticker(TICKER)
-EXPIRATION = get_nearest_expiration(ticker)
+LOG_FILE = Path(__file__).parent / "scanner_log.txt"
 
-chain = ticker.option_chain(EXPIRATION)
+def log(message: str):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-calls = filter_options(chain.calls, "CALL")
-puts = filter_options(chain.puts, "PUT")
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"[{timestamp}] {message}\n")
+        
+def run_scan():
+    log("Scan started")
 
-# Combine calls + puts
-all_options = pd.concat([calls, puts], ignore_index=True)
+    try:
+        # --------------------------------------------------
+        # Fetch Options Data
+        # --------------------------------------------------
+        now = datetime.now()
+        
+        meta = {
+            "ticker": TICKER,
+            "today": now.date().isoformat(),
+            "scan_time": now.strftime("%Y-%m-%d %H:%M:%S")
+        }
 
-# Keep schema stable
-COLUMNS = [
-    "ticker",
-    "date",
-    "expiration",
-    "optionType",
-    "strike",
-    "volume",
-    "openInterest",
-    "impliedVolatility",
-    "lastPrice"
-]
+        ticker = yf.Ticker(TICKER)
+        expiration = get_nearest_expiration(ticker)
+        
+        
+        chain = ticker.option_chain(expiration)
 
-all_options = all_options[COLUMNS]
+        calls = filter_options(chain.calls, "CALL", expiration, MIN_VOLUME, meta)
+        puts = filter_options(chain.puts, "PUT", expiration, MIN_VOLUME, meta)
 
-# --------------------------------------------------
-# Save to CSV (Append Mode)
-# --------------------------------------------------
-if DATA_PATH.exists():
-    existing = pd.read_csv(DATA_PATH)
-    combined = pd.concat([existing, all_options], ignore_index=True)
-else:
-    combined = all_options
+        # Combine calls + puts
+        all_options = pd.concat([calls, puts], ignore_index=True)
 
-combined.to_csv(DATA_PATH, index=False)
+        # Keep schema stable
+        COLUMNS = [
+            "ticker",
+            "date",
+            "scan_time",
+            "expiration",
+            "optionType",
+            "strike",
+            "volume",
+            "openInterest",
+            "impliedVolatility",
+            "lastPrice"
+        ]
 
-# --------------------------------------------------
-# Logging
-# --------------------------------------------------
-print(f"{TICKER} options scan completed for {TODAY}")
-print(f"Expiration: {EXPIRATION}")
-print("-" * 40)
+        all_options = all_options[COLUMNS]
 
-print(f"Calls saved: {len(calls)}")
-print(f"Call volume: {calls['volume'].sum()}")
+        # --------------------------------------------------
+        # Save to CSV (Append Mode)
+        # --------------------------------------------------
+        if DATA_PATH.exists():
+            existing = pd.read_csv(DATA_PATH)
 
-print("-" * 40)
+            combined = pd.concat(
+                [existing, all_options],
+                ignore_index=True
+            )
+        else:
+            combined = all_options
 
-print(f"Puts saved: {len(puts)}")
-print(f"Put volume: {puts['volume'].sum()}")
+        combined = combined.drop_duplicates(
+            subset=[
+                "ticker",
+                "expiration",
+                "strike",
+                "optionType",
+                "scan_time"
+            ],
+            keep="last"
+        )
+
+        combined.to_csv(DATA_PATH, index=False)
+
+        # --------------------------------------------------
+        # Logging
+        # --------------------------------------------------
+        log(f"{TICKER} scan completed for {meta['scan_time']}")
+        log(f"Expiration: {expiration}")
+        
+        log(f"-" * 40)
+
+        log(f"Calls saved: {len(calls)}")
+        log(f"Call volume: {calls['volume'].sum()}")
+        
+        log(f"-" * 40)
+
+        log(f"Puts saved: {len(puts)}")
+        log(f"Put volume: {puts['volume'].sum()}")
+        
+        log(f"-" * 20)
+
+        log("Scan completed successfully")
+
+    except Exception as e:
+        log(f"ERROR: {str(e)}")
+        raise
+        
+if __name__ == "__main__":
+    run_scan()
