@@ -16,7 +16,7 @@ It consists of:
 - Automatically selects the **nearest valid expiration**
 - Filters options by minimum volume threshold
 - Supports **both calls and puts**
-- Appends daily results to a CSV file
+- Appends historical scan results to a CSV file
 - Designed for automation (daily runs)
 
 ### Dashboard
@@ -30,14 +30,36 @@ It consists of:
 
 ---
 
+## 📸 Dashboard Preview
+
+### Main Dashboard
+![Main Dashboard](images/dashboard_main.png)
+
+### Options Pressure Heatmap
+![Pressure Heatmap](images/pressure_heatmap.png)
+
+### Volume Analysis
+![Volume Analysis](images/volume_analysis.png)
+
+The dashboard provides an interactive view of AVGO options activity, including:
+- Current AVGO price and daily change
+- Volume and open interest by strike
+- Call vs Put pressure visualization
+- Historical volume trends
+- Dynamic filtering for Calls, Puts, or Both
+
+---
+
 ## 📁 Project Structure
 ```text
 options_scanner/
 │
-├── scanner.py 			# Daily options scanner
-├── dashboard.py 		# Streamlit dashboard
-├── avgo_options.csv 	# Stored scan results
-└── README.md 			# Project documentation
+├── scanner.py          # Automated options scanner
+├── dashboard.py        # Streamlit dashboard
+├── scanner_log.txt     # Scan execution logs
+├── avgo_options.csv    # Historical options data
+├── README.md           # Project documentation
+└── requirements.txt    # Project dependencies
 ```
 
 ## ⚙️ Requirements
@@ -62,7 +84,7 @@ python scanner.py
 What it does:
 
 - Fetches the nearest expiration for AVGO
-- Filters options with volume > 3000
+- Filters options with volume > 500
 - Saves calls and puts to avgo_options.csv
 
 
@@ -79,6 +101,25 @@ Start the Streamlit app:
 streamlit run dashboard.py
 ```
 Then open the URL shown in your terminal (usually http://localhost:8501)
+
+---
+
+## 🤖 Automation & Logging
+
+The scanner is designed to run automatically using Windows Task Scheduler.
+
+Features include:
+- Scheduled scanning during market hours
+- Persistent scan history
+- Execution logging
+- Error tracking and troubleshooting support
+
+The scanner writes execution details to scanner_log.txt including:
+- Scan start time
+- Scan completion status
+- Selected expiration
+- Volume statistics
+- Error messages
 
 
 ## 🧠 Data Columns
@@ -103,7 +144,7 @@ The CSV file includes:
 Inside scanner.py:
 
 TICKER = "AVGO"
-MIN_VOLUME = 3000
+MIN_VOLUME = 500
 
 You can easily modify:
 - The ticker symbol
