@@ -32,14 +32,13 @@ It consists of:
 
 ## 📸 Dashboard Preview
 
-### Main Dashboard
-![Main Dashboard](images/dashboard_main.png)
+![Main Dashboard](images/dashboard_screenshot1.png)
 
-### Options Pressure Heatmap
-![Pressure Heatmap](images/pressure_heatmap.png)
+![Pressure Heatmap](images/dashboard_screenshot2.png)
 
-### Volume Analysis
-![Volume Analysis](images/volume_analysis.png)
+![Volume Analysis](images/dashboard_screenshot3.png)
+
+![Volume Analysis](images/dashboard_screenshot4.png)
 
 The dashboard provides an interactive view of AVGO options activity, including:
 - Current AVGO price and daily change
