@@ -73,7 +73,8 @@ st.subheader(f"Latest Scan: {latest_scan}")
 
 st.dataframe(
     today_df[["optionType", "strike", "volume", "openInterest"]],
-    width="stretch"
+    width="stretch",
+    hide_index=True
 )
 
 # --------------------------------------------------
